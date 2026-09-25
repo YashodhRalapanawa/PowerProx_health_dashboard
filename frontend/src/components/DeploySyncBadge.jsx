@@ -9,10 +9,11 @@ import React from 'react';
  * @param {{
  *   status: 'up-to-date' | 'pending' | string,
  *   latestCommit?: string,
- *   deployedCommit?: string
+ *   deployedCommit?: string,
+ *   latestCommitMessage?: string
  * }} props
  */
-export function DeploySyncBadge({ status, latestCommit, deployedCommit }) {
+export function DeploySyncBadge({ status, latestCommit, deployedCommit, latestCommitMessage }) {
   if (!status) return null;
 
   const isUpToDate = status === 'up-to-date';
@@ -21,9 +22,10 @@ export function DeploySyncBadge({ status, latestCommit, deployedCommit }) {
     <span
       className={`deploy-badge ${isUpToDate ? 'deploy-synced' : 'deploy-pending'}`}
       title={
-        latestCommit && deployedCommit
+        latestCommitMessage ||
+        (latestCommit && deployedCommit
           ? `Deployed: ${deployedCommit} | Latest: ${latestCommit}`
-          : undefined
+          : undefined)
       }
     >
       <svg

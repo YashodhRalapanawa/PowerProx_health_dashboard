@@ -12,7 +12,7 @@ import DeploySyncBadge from './DeploySyncBadge';
  *
  * @param {{
  *   site: { name: string, url: string, summary: string, status: string },
- *   githubStatus?: Array<{ repo: string, latestCommit: string, deployedCommit: string, status: string }>
+ *   githubStatus?: Array<{ repo: string, latestCommit: string, latestCommitMessage?: string, deployedCommit: string, status: string }>
  * }} props
  */
 export function SiteCard({ site, githubStatus = [] }) {
@@ -44,6 +44,7 @@ export function SiteCard({ site, githubStatus = [] }) {
               status={matchedRepo.status}
               latestCommit={matchedRepo.latestCommit}
               deployedCommit={matchedRepo.deployedCommit}
+              latestCommitMessage={matchedRepo.latestCommitMessage}
             />
           ) : (
             <span className="site-url-hint">{new URL(site.url).host}</span>

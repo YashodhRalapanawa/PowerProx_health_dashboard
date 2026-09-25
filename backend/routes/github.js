@@ -53,9 +53,21 @@ export async function writeDeployedCommits(data) {
 // In-memory cache for GitHub API results (5 minutes TTL to respect rate limits)
 const CACHE_TTL_MS = 5 * 60 * 1000;
 let commitCache = {
-  data: null, // Array of { site, repo, latestCommit }
+  data: null, // Array of { site, repo, latestCommit, latestCommitMessage }
   cachedAt: 0
 };
+
+/**
+ * Formats a raw commit message to its first line, truncated to 60 characters with "...".
+ *
+ * @param {string} [rawMessage]
+ * @returns {string}
+ */
+function formatCommitMessage(rawMessage) {
+  if (!rawMessage || typeof rawMessage !== 'string') return '';
+  const firstLine = rawMessage.split(/\r?\n/)[0].trim();
+  return firstLine.length > 60 ? `${firstLine.slice(0, 60)}...` : firstLine;
+}
 
 /**
  * GET /api/github-status
@@ -82,18 +94,22 @@ router.get('/', async (req, res) => {
               per_page: 1
             });
 
-            const sha = data?.[0]?.sha;
+            const firstCommit = data?.[0];
+            const sha = firstCommit?.sha;
+            const message = firstCommit?.commit?.message;
             return {
               site: config.site,
               repo: config.repo,
-              latestCommit: sha ? sha.slice(0, 7) : 'unknown'
+              latestCommit: sha ? sha.slice(0, 7) : 'unknown',
+              latestCommitMessage: formatCommitMessage(message)
             };
           } catch (err) {
             console.warn(`[GitHub Router] Failed to get latest commit for ${config.owner}/${config.repo}:`, err.message);
             return {
               site: config.site,
               repo: config.repo,
-              latestCommit: 'unknown'
+              latestCommit: 'unknown',
+              latestCommitMessage: ''
             };
           }
         })
@@ -107,7 +123,8 @@ router.get('/', async (req, res) => {
         return {
           site: repos[idx].site,
           repo: repos[idx].repo,
-          latestCommit: 'unknown'
+          latestCommit: 'unknown',
+          latestCommitMessage: ''
         };
       });
 
@@ -139,6 +156,7 @@ router.get('/', async (req, res) => {
         site: item.site,
         repo: item.repo,
         latestCommit: item.latestCommit,
+        latestCommitMessage: item.latestCommitMessage || '',
         deployedCommit,
         status: isUpToDate ? 'up-to-date' : 'pending'
       };
