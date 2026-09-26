@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * StatusBadge Component
  * Displays a badge with status text and an animated indicator dot.

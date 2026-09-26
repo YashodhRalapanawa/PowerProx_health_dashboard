@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDashboardData } from './hooks/useDashboardData';
 import HealthBar from './components/HealthBar';
 import SiteGrid from './components/SiteGrid';

@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * DeploySyncBadge Component
  * Displays GitHub deployment synchronization status:

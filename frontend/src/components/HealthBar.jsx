@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Determines indicator color class based on resource utilization percentage.
  *

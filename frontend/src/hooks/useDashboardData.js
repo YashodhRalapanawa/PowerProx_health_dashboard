@@ -30,16 +30,11 @@ export function useDashboardData() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Keep track of unmounted state to prevent memory leaks
+  // Keep track of unmounted state to prevent state updates after unmount
   const isMounted = useRef(true);
 
-  const fetchData = useCallback(async (isInitial = false) => {
-    if (isInitial) {
-      setLoading(true);
-    }
-
+  const performFetch = useCallback(async () => {
     try {
-      // Concurrently query all 3 endpoints using axios
       const [sitesRes, healthRes, githubRes] = await Promise.all([
         axios.get(`${API_BASE}/sites`),
         axios.get(`${API_BASE}/health`),
@@ -64,21 +59,29 @@ export function useDashboardData() {
     }
   }, []);
 
+  const refetch = useCallback(() => {
+    setLoading(true);
+    return performFetch();
+  }, [performFetch]);
+
   useEffect(() => {
     isMounted.current = true;
-    // Initial fetch
-    fetchData(true);
 
-    // Poll every 30 seconds
+    async function startFetch() {
+      await performFetch();
+    }
+
+    startFetch();
+
     const intervalId = setInterval(() => {
-      fetchData(false);
+      startFetch();
     }, 30000);
 
     return () => {
       isMounted.current = false;
       clearInterval(intervalId);
     };
-  }, [fetchData]);
+  }, [performFetch]);
 
   return {
     sites,
@@ -87,7 +90,7 @@ export function useDashboardData() {
     loading,
     error,
     lastUpdated,
-    refetch: () => fetchData(false)
+    refetch
   };
 }
 
