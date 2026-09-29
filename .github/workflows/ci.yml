@@ -82,3 +82,13 @@ jobs:
             VITE_API_URL=/api
           platforms: linux/amd64
           push: false
+
+      - name: Build frontend server Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.server
+          build-args: |
+            VITE_API_URL=/api
+          platforms: linux/amd64
+          push: false
