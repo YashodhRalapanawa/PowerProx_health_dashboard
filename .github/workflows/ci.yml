@@ -92,3 +92,74 @@ jobs:
             VITE_API_URL=/api
           platforms: linux/amd64
           push: false
+
+  export-images:
+    name: Export Deployment Images (linux/amd64)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Create export directory
+        run: mkdir -p dist-artifacts
+
+      - name: Build and export backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64
+          tags: powerprox-backend:${{ github.sha }}
+          outputs: type=docker,dest=dist-artifacts/powerprox-backend.tar
+
+      - name: Build and export frontend server image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.server
+          build-args: |
+            VITE_API_URL=/api
+          platforms: linux/amd64
+          tags: powerprox-frontend:${{ github.sha }}
+          outputs: type=docker,dest=dist-artifacts/powerprox-frontend.tar
+
+      - name: Generate manifest and checksums
+        run: |
+          cat <<EOF > dist-artifacts/manifest.json
+          {
+            "commit": "${{ github.sha }}",
+            "ref": "${{ github.ref }}",
+            "platform": "linux/amd64",
+            "generated_at": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "images": {
+              "backend": {
+                "tag": "powerprox-backend:${{ github.sha }}",
+                "archive": "powerprox-backend.tar",
+                "dockerfile": "backend/Dockerfile"
+              },
+              "frontend": {
+                "tag": "powerprox-frontend:${{ github.sha }}",
+                "archive": "powerprox-frontend.tar",
+                "dockerfile": "frontend/Dockerfile.server",
+                "build_args": {
+                  "VITE_API_URL": "/api"
+                }
+              }
+            }
+          }
+          EOF
+          cd dist-artifacts
+          sha256sum powerprox-backend.tar powerprox-frontend.tar manifest.json > SHA256SUMS
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: powerprox-deployment-images
+          path: dist-artifacts/
+          retention-days: 7
+          if-no-files-found: error

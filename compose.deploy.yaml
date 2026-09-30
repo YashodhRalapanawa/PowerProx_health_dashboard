@@ -1,0 +1,40 @@
+name: powerprox-server
+
+services:
+  backend:
+    image: powerprox-backend:${IMAGE_TAG}
+    pull_policy: never
+    env_file:
+      - ./backend/.env.server
+    environment:
+      PORT: "5000"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+
+  frontend:
+    image: powerprox-frontend:${IMAGE_TAG}
+    pull_policy: never
+    ports:
+      - "127.0.0.1:8095:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
