@@ -16,11 +16,14 @@ Designed for developer workstations running Docker Desktop.
 
 ### 2. Image-Only Server Deployment (`compose.deploy.yaml`) - *Recommended for Production*
 Designed for staging and production servers using prebuilt, verified `linux/amd64` images exported by GitHub Actions.
+- **Target URL**: `https://powerprox.sltidc.lk/monitoring/`
+- **Reverse Proxy Routing**: Upstream Apache forwards `/monitoring/` to `http://127.0.0.1:8095/`, stripping the `/monitoring/` prefix.
+- **API Isolation**: Uses `VITE_API_URL=/monitoring/api` so dashboard API calls never collide with the company's existing `/api/` application on the host domain.
 - **No On-Host Builds**: Contains no `build` directives.
 - **No Registry Pulls**: Configured with `pull_policy: never` to guarantee only verified, loaded images run.
 - **Immutable Tags**: Uses `${IMAGE_TAG}` matching the full Git commit SHA.
 - **Backend**: Runs internally inside the private Compose network on port 5000 (no published host port). Requires `backend/.env.server`.
-- **Frontend**: Serves the production bundle via Nginx, binding strictly to loopback `127.0.0.1:8095:80`.
+- **Frontend**: Serves the production bundle via Nginx built with `VITE_BASE_PATH=/monitoring/`, binding strictly to loopback `127.0.0.1:8095:80`.
 - **Resource Limits**: Configured with initial CPU and memory limits.
 
 ### 3. Server Build & Run (`compose.server.yaml`) - *Legacy / On-Host Build*
@@ -164,8 +167,15 @@ ports:
 ```
 
 This binds Nginx strictly to the loopback interface (`127.0.0.1`) on port `8095`:
-- **Server-Local Only**: The dashboard is accessible only from within the host machine itself (or via an SSH tunnel: `ssh -L 8095:127.0.0.1:8095 user@server`).
-- **Production Public Access**: To expose the dashboard externally, route traffic through the company's designated edge reverse proxy (e.g., host-level Nginx, Caddy, or Traefik) with SSL/TLS termination and access control.
+- **Server-Local Only**: The dashboard is accessible directly on the server via `http://127.0.0.1:8095/` (or via an SSH tunnel: `ssh -L 8095:127.0.0.1:8095 user@server`).
+- **Production Public Access (`https://powerprox.sltidc.lk/monitoring/`)**: Apache on the host terminates SSL and forwards requests to the container, stripping `/monitoring/`:
+  ```apache
+  ProxyPass /monitoring/ http://127.0.0.1:8095/
+  ProxyPassReverse /monitoring/ http://127.0.0.1:8095/
+  ```
+  - Incoming requests to `/monitoring/` reach the container as `/`.
+  - Static asset requests (`/monitoring/assets/...`) reach the container as `/assets/...`.
+  - API requests (`/monitoring/api/...`) reach the container as `/api/...`, allowing the container's Nginx to proxy them to `backend:5000/api/` without interfering with the host's primary `/api/` application.
 
 ---
 

@@ -55,7 +55,8 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          VITE_API_URL: /api
+          VITE_BASE_PATH: /monitoring/
+          VITE_API_URL: /monitoring/api
 
   docker:
     name: Docker Builds (linux/amd64)
@@ -89,7 +90,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile.server
           build-args: |
-            VITE_API_URL=/api
+            VITE_BASE_PATH=/monitoring/
+            VITE_API_URL=/monitoring/api
           platforms: linux/amd64
           push: false
 
@@ -123,7 +125,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile.server
           build-args: |
-            VITE_API_URL=/api
+            VITE_BASE_PATH=/monitoring/
+            VITE_API_URL=/monitoring/api
           platforms: linux/amd64
           tags: powerprox-frontend:${{ github.sha }}
           outputs: type=docker,dest=dist-artifacts/powerprox-frontend.tar
@@ -147,7 +150,8 @@ jobs:
                 "archive": "powerprox-frontend.tar",
                 "dockerfile": "frontend/Dockerfile.server",
                 "build_args": {
-                  "VITE_API_URL": "/api"
+                  "VITE_BASE_PATH": "/monitoring/",
+                  "VITE_API_URL": "/monitoring/api"
                 }
               }
             }

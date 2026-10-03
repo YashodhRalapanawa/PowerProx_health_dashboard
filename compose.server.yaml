@@ -22,7 +22,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.server
       args:
-        VITE_API_URL: /api
+        VITE_BASE_PATH: /monitoring/
+        VITE_API_URL: /monitoring/api
     ports:
       - "127.0.0.1:8095:80"
     depends_on:
