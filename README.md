@@ -203,3 +203,33 @@ docker compose -f compose.server.yaml down
 > - System health metrics (CPU utilization, memory usage, disk storage, and host load) displayed on the dashboard are **provisional** until verified directly against the physical company server environment.
 > - When running locally under macOS with Docker Desktop, system metrics collected inside containers reflect Docker Desktop's underlying **Linux VM**, not the physical host Mac hardware.
 > - Final host-metric verification and end-to-end production deployment verification are pending execution on the actual company server hardware.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+rjrfrfrf
