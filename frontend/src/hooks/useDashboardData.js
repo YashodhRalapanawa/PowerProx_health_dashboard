@@ -1,27 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-
-// Resolve the backend API base URL from Vite environment variables or default to localhost
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
-
-/**
- * Custom hook to periodically fetch monitoring dashboard data:
- * - Sites availability & response statuses
- * - System health metrics (CPU, RAM, Disk, Uptime)
- * - GitHub deployment & commit statuses
- *
- * Runs on initial mount and repeats every 30 seconds.
- *
- * @returns {{
- *   sites: Array,
- *   health: Object|null,
- *   githubStatus: Array,
- *   loading: boolean,
- *   error: string|null,
- *   lastUpdated: Date|null,
- *   refetch: Function
- * }}
- */
 export function useDashboardData() {
   const [sites, setSites] = useState([]);
   const [health, setHealth] = useState(null);
@@ -29,69 +8,29 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-
-  // Keep track of unmounted state to prevent state updates after unmount
-  const isMounted = useRef(true);
-
+  const mounted = useRef(false);
+  const inFlight = useRef(false);
   const performFetch = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    if (mounted.current) setLoading(true);
     try {
-      const [sitesRes, healthRes, githubRes] = await Promise.all([
-        axios.get(`${API_BASE}/sites`),
-        axios.get(`${API_BASE}/health`),
-        axios.get(`${API_BASE}/github-status`)
-      ]);
-
-      if (!isMounted.current) return;
-
-      setSites(sitesRes.data || []);
-      setHealth(healthRes.data || null);
-      setGithubStatus(githubRes.data || []);
-      setError(null);
-      setLastUpdated(new Date());
-    } catch (err) {
-      if (!isMounted.current) return;
-      console.error('Failed to fetch dashboard data:', err);
-      setError(err.response?.data?.message || err.message || 'Unable to connect to monitoring backend');
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
-    }
+      const results = await Promise.allSettled(['sites', 'health', 'github-status'].map(route => axios.get(`${API_BASE}/${route}`, { timeout: 45000 })));
+      if (!mounted.current) return;
+      const [s, h, g] = results;
+      if (s.status === 'fulfilled' && Array.isArray(s.value.data)) { setSites(s.value.data); setLastUpdated(new Date()); } else setSites([]);
+      setHealth(h.status === 'fulfilled' ? h.value.data : null);
+      setGithubStatus(g.status === 'fulfilled' && Array.isArray(g.value.data) ? g.value.data : []);
+      const failures = results.flatMap((r, i) => r.status === 'rejected' ? [['Service checks', 'System metrics', 'GitHub data'][i]] : []);
+      setError(failures.length ? `${failures.join(', ')} unavailable. Retry to fetch current data.` : null);
+    } finally { inFlight.current = false; if (mounted.current) setLoading(false); }
   }, []);
-
-  const refetch = useCallback(() => {
-    setLoading(true);
-    return performFetch();
-  }, [performFetch]);
-
   useEffect(() => {
-    isMounted.current = true;
-
-    async function startFetch() {
-      await performFetch();
-    }
-
-    startFetch();
-
-    const intervalId = setInterval(() => {
-      startFetch();
-    }, 30000);
-
-    return () => {
-      isMounted.current = false;
-      clearInterval(intervalId);
-    };
+    mounted.current = true;
+    const initial = setTimeout(performFetch, 0);
+    const interval = setInterval(performFetch, 30000);
+    return () => { mounted.current = false; clearTimeout(initial); clearInterval(interval); };
   }, [performFetch]);
-
-  return {
-    sites,
-    health,
-    githubStatus,
-    loading,
-    error,
-    lastUpdated,
-    refetch
-  };
+  return { sites, health, githubStatus, loading, error, lastUpdated, refetch: performFetch };
 }
-
 export default useDashboardData;

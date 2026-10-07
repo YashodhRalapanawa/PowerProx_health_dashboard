@@ -20,8 +20,9 @@ router.get('/', async (req, res) => {
     // Ping all sites concurrently using Promise.allSettled to prevent single-site failures from breaking the batch
     const results = await Promise.allSettled(
       sites.map(async (site) => {
+        const started = performance.now();
         try {
-          await axios.get(site.url, {
+          const response = await axios.get(site.url, {
             timeout: 5000,
             httpsAgent,
             // Treat status codes below 500 (including 2xx, 3xx, and 401/403) as the server responding
@@ -32,14 +33,20 @@ router.get('/', async (req, res) => {
             name: site.name,
             url: site.url,
             summary: site.summary,
-            status: 'working'
+            status: 'working',
+            responseTimeMs: Math.round(performance.now() - started),
+            httpStatus: response.status,
+            checkedAt: new Date().toISOString()
           };
-        } catch {
+        } catch (error) {
           return {
             name: site.name,
             url: site.url,
             summary: site.summary,
-            status: 'down'
+            status: 'down',
+            responseTimeMs: error.response ? Math.round(performance.now() - started) : null,
+            httpStatus: error.response?.status || null,
+            checkedAt: new Date().toISOString()
           };
         }
       })

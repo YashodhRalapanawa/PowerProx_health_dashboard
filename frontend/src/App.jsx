@@ -28,6 +28,8 @@ function App() {
             <div className="header-status-pill">
               {loading && !sites.length ? (
                 <span className="pill-checking">Connecting to telemetry...</span>
+              ) : !sites.length ? (
+                <span className="pill-checking">Service status unavailable</span>
               ) : allWorking ? (
                 <span className="pill-all-good">
                   <span className="pulse-dot green" /> All Systems Operational ({totalSites}/{totalSites})
@@ -50,6 +52,13 @@ function App() {
       {/* Main Content Area */}
       <main className="dashboard-main">
         <div className="content-container">
+          <div className="overview-intro"><p className="eyebrow">POWERPROX • OPERATIONS OVERVIEW</p><h2>Service health. Development activity.</h2><p>Availability and the latest changes across your production services.</p></div>
+          <div className="overview-stats">
+            <div><span>Responding</span><strong>{sites.length ? totalSites - downSites : '—'}<small> / {totalSites}</small></strong></div>
+            <div><span>Unavailable services</span><strong>{sites.length ? downSites : '—'}</strong></div>
+            <div><span>Known failed workflows</span><strong>{githubStatus.some(item => item.build && !['unavailable', 'partial'].includes(item.build.state)) ? githubStatus.filter(item => item.build?.state === 'failed').length : '—'}</strong></div>
+            <div><span>GitHub connected</span><strong>{githubStatus.filter(item => item.githubState === 'available').length}<small> repositories</small></strong></div>
+          </div>
           {/* Controls & Refresh Bar */}
           <div className="dashboard-toolbar">
             <div className="toolbar-left">
@@ -65,7 +74,7 @@ function App() {
               )}
               <button
                 type="button"
-                className="refresh-button"
+                className="refresh-button" disabled={loading}
                 onClick={() => refetch()}
                 aria-label="Refresh dashboard data"
                 title="Refresh now"
@@ -136,10 +145,10 @@ function App() {
       <footer className="dashboard-footer">
         <div className="footer-container">
           <p className="footer-text">
-            PowerProx Telemetry Engine &bull; Auto-refreshes every 30 seconds
+            Service checks every 30 seconds &bull; GitHub data cached for 5 minutes
           </p>
           <p className="footer-subtext">
-            Sri Lanka Telecom Internal Network Monitoring
+            HTTP availability checks • Configured commit baselines do not verify live deployments
           </p>
         </div>
       </footer>
